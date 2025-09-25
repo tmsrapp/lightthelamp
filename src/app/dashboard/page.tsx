@@ -198,19 +198,19 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white/10 backdrop-blur-lg border-b border-white/20">
+      <header className="bg-gray-50 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center mr-3">
-                <div className="text-xl font-bold text-blue-900">🏒</div>
+              <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center mr-3">
+                <div className="text-xl font-bold text-white">🏒</div>
               </div>
-              <h1 className="text-2xl font-bold text-white">Light The Lamp</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Light The Lamp</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-white/80">Welcome, {user.email}</span>
+              <span className="text-gray-600">Welcome, {user.email}</span>
               <button
                 onClick={handleSignOut}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-200"
@@ -226,8 +226,8 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-white mb-2">Fantasy Leagues</h2>
-            <p className="text-blue-200 text-lg">Join existing leagues or create your own</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Fantasy Leagues</h2>
+            <p className="text-gray-600 text-lg">Join existing leagues or create your own</p>
           </div>
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
@@ -239,11 +239,11 @@ export default function Dashboard() {
 
         {/* Create League Form */}
         {showCreateForm && (
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 mb-8">
-            <h3 className="text-xl font-semibold text-white mb-4">Create New League</h3>
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 mb-8 shadow-lg">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Create New League</h3>
             <form onSubmit={handleCreateLeague} className="space-y-4">
               <div>
-                <label htmlFor="leagueName" className="block text-sm font-medium text-white mb-2">
+                <label htmlFor="leagueName" className="block text-sm font-medium text-gray-700 mb-2">
                   League Name *
                 </label>
                 <input
@@ -251,20 +251,20 @@ export default function Dashboard() {
                   id="leagueName"
                   value={newLeagueName}
                   onChange={(e) => setNewLeagueName(e.target.value)}
-                  className="w-full px-4 py-2 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter league name"
                   required
                 />
               </div>
               <div>
-                <label htmlFor="leagueDescription" className="block text-sm font-medium text-white mb-2">
+                <label htmlFor="leagueDescription" className="block text-sm font-medium text-gray-700 mb-2">
                   Description (Optional)
                 </label>
                 <textarea
                   id="leagueDescription"
                   value={newLeagueDescription}
                   onChange={(e) => setNewLeagueDescription(e.target.value)}
-                  className="w-full px-4 py-2 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter league description"
                   rows={3}
                 />
@@ -293,13 +293,13 @@ export default function Dashboard() {
         <div className="space-y-6">
           {leaguesLoading ? (
             <div className="text-center py-8">
-              <div className="text-white text-xl">Loading leagues...</div>
+              <div className="text-gray-900 text-xl">Loading leagues...</div>
             </div>
           ) : leagues.length === 0 ? (
-            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 text-center">
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 text-center shadow-lg">
               <div className="text-4xl mb-4">🏒</div>
-              <h3 className="text-xl font-semibold text-white mb-2">No leagues yet</h3>
-              <p className="text-blue-200">Be the first to create a league!</p>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No leagues yet</h3>
+              <p className="text-gray-600">Be the first to create a league!</p>
             </div>
           ) : (
             leagues.map((league) => {
@@ -308,35 +308,57 @@ export default function Dashboard() {
               const isCreator = league.created_by === user?.id;
 
               return (
-                <div key={league.id} className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                <div key={league.id} className="bg-gray-50 border border-gray-200 rounded-2xl p-6 hover:bg-gray-100 transition duration-200 shadow-lg">
                   <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-white mb-2">{league.name}</h3>
+                    <div 
+                      className="flex-1 cursor-pointer"
+                      onClick={() => router.push(`/dashboard/league/${league.id}`)}
+                    >
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2 hover:text-blue-600 transition duration-200">{league.name}</h3>
                       {league.description && (
-                        <p className="text-blue-200 mb-3">{league.description}</p>
+                        <p className="text-gray-600 mb-3">{league.description}</p>
                       )}
-                      <div className="flex items-center space-x-4 text-sm text-blue-200">
+                      <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <span>👥 {memberCount} member{memberCount !== 1 ? 's' : ''}</span>
                         <span>📅 Created {new Date(league.created_at).toLocaleDateString()}</span>
-                        {isCreator && <span className="text-yellow-300">👑 You created this league</span>}
+                        {isCreator && <span className="text-yellow-600">👑 You created this league</span>}
                       </div>
+                      {isMember && (
+                        <div className="mt-2 text-sm text-green-600">
+                          ✓ You're a member - Click to view league
+                        </div>
+                      )}
                     </div>
-                    <div className="ml-4">
+                    <div className="ml-4 flex flex-col space-y-2">
                       {isMember ? (
-                        <button
-                          onClick={() => handleLeaveLeague(league.id)}
-                          disabled={isCreator}
-                          className={`px-4 py-2 rounded-lg transition duration-200 font-semibold ${
-                            isCreator
-                              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                              : 'bg-red-600 hover:bg-red-700 text-white'
-                          }`}
-                        >
-                          {isCreator ? 'Creator' : 'Leave'}
-                        </button>
+                        <>
+                          <button
+                            onClick={() => router.push(`/dashboard/league/${league.id}`)}
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200 font-semibold"
+                          >
+                            View League
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleLeaveLeague(league.id);
+                            }}
+                            disabled={isCreator}
+                            className={`px-4 py-2 rounded-lg transition duration-200 font-semibold ${
+                              isCreator
+                                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                : 'bg-red-600 hover:bg-red-700 text-white'
+                            }`}
+                          >
+                            {isCreator ? 'Creator' : 'Leave'}
+                          </button>
+                        </>
                       ) : (
                         <button
-                          onClick={() => handleJoinLeague(league.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleJoinLeague(league.id);
+                          }}
                           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 font-semibold"
                         >
                           Join

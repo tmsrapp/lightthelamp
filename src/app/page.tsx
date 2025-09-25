@@ -234,22 +234,22 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8">
         {/* Logo and Title */}
         <div className="text-center">
-          <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-4">
-            <div className="text-4xl font-bold text-blue-900">🏒</div>
+          <div className="mx-auto h-20 w-20 bg-blue-600 rounded-full flex items-center justify-center mb-4">
+            <div className="text-4xl font-bold text-white">🏒</div>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">Light The Lamp</h1>
-          <p className="text-blue-200 text-lg">NHL Fantasy League</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Light The Lamp</h1>
+          <p className="text-gray-600 text-lg">NHL Fantasy League</p>
         </div>
 
         {/* Auth Form */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 shadow-lg">
           <form onSubmit={handleAuth} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address
               </label>
               <input
@@ -258,20 +258,20 @@ export default function Home() {
                 required
                 value={email}
                 onChange={handleEmailChange}
-                className={`w-full px-4 py-3 bg-white/20 border rounded-lg text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:border-transparent ${
+                className={`w-full px-4 py-3 bg-white border rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent ${
                   emailError 
                     ? 'border-red-400 focus:ring-red-500' 
-                    : 'border-white/30 focus:ring-blue-500'
+                    : 'border-gray-300 focus:ring-blue-500'
                 }`}
                 placeholder="Enter your real email address"
               />
               {emailError && (
-                <p className="mt-1 text-sm text-red-300">{emailError}</p>
+                <p className="mt-1 text-sm text-red-600">{emailError}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
               <input
@@ -280,21 +280,21 @@ export default function Home() {
                 required
                 value={password}
                 onChange={handlePasswordChange}
-                className={`w-full px-4 py-3 bg-white/20 border rounded-lg text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:border-transparent ${
+                className={`w-full px-4 py-3 bg-white border rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent ${
                   passwordError 
                     ? 'border-red-400 focus:ring-red-500' 
-                    : 'border-white/30 focus:ring-blue-500'
+                    : 'border-gray-300 focus:ring-blue-500'
                 }`}
                 placeholder="Enter your password"
               />
               {passwordError && (
-                <p className="mt-1 text-sm text-red-300">{passwordError}</p>
+                <p className="mt-1 text-sm text-red-600">{passwordError}</p>
               )}
             </div>
 
             {isSignUp && (
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-white mb-2">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
                   Confirm Password
                 </label>
                 <input
@@ -303,10 +303,10 @@ export default function Home() {
                   required={isSignUp}
                   value={confirmPassword}
                   onChange={handleConfirmPasswordChange}
-                  className={`w-full px-4 py-3 bg-white/20 border rounded-lg text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:border-transparent ${
+                  className={`w-full px-4 py-3 bg-white border rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent ${
                     passwordError && confirmPassword
                       ? 'border-red-400 focus:ring-red-500' 
-                      : 'border-white/30 focus:ring-blue-500'
+                      : 'border-gray-300 focus:ring-blue-500'
                   }`}
                   placeholder="Confirm your password"
                 />
@@ -332,7 +332,7 @@ export default function Home() {
                   setPasswordError('');
                   setMessage('');
                 }}
-                className="text-blue-200 hover:text-white text-sm font-medium transition duration-200"
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium transition duration-200"
               >
                 {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
               </button>
@@ -342,8 +342,8 @@ export default function Home() {
           {message && (
             <div className={`mt-4 p-3 rounded-lg text-sm ${
               message.includes('error') || message.includes('Error') || message.includes('Invalid') || message.includes('already exists')
-                ? 'bg-red-500/20 text-red-200 border border-red-500/30' 
-                : 'bg-green-500/20 text-green-200 border border-green-500/30'
+                ? 'bg-red-50 text-red-700 border border-red-200' 
+                : 'bg-green-50 text-green-700 border border-green-200'
             }`}>
               {message}
             </div>
@@ -352,12 +352,12 @@ export default function Home() {
 
         {/* Setup Instructions */}
         {(!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'your_supabase_project_url') && (
-          <div className="bg-yellow-500/20 backdrop-blur-lg rounded-2xl p-6 border border-yellow-500/30">
-            <h3 className="text-lg font-semibold text-yellow-200 mb-2">🚀 Setup Required</h3>
-            <p className="text-yellow-100 text-sm mb-3">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6">
+            <h3 className="text-lg font-semibold text-yellow-800 mb-2">🚀 Setup Required</h3>
+            <p className="text-yellow-700 text-sm mb-3">
               To enable authentication, please configure your Supabase credentials:
             </p>
-            <ol className="text-yellow-100 text-sm space-y-1 text-left">
+            <ol className="text-yellow-700 text-sm space-y-1 text-left">
               <li>1. Create a project at <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="underline">supabase.com</a></li>
               <li>2. Copy your project URL and anon key</li>
               <li>3. Update .env.local with your credentials</li>
@@ -367,7 +367,7 @@ export default function Home() {
         )}
 
         {/* Features Preview */}
-        <div className="text-center text-white/80 text-sm space-y-2">
+        <div className="text-center text-gray-600 text-sm space-y-2">
           <p>🏆 Join leagues for your favorite NHL team</p>
           <p>⚡ Pick players and earn points based on performance</p>
           <p>🔄 Snake draft ensures fair player selection</p>
