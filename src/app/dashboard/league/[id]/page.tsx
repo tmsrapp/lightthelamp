@@ -10,6 +10,7 @@ interface League {
   description?: string;
   created_at: string;
   created_by: string;
+  pot_amount?: number;
 }
 
 interface UserProfile {
@@ -39,6 +40,8 @@ interface RedWingsGame {
   status: string;
   gameDate: string;
   error?: string;
+  isMockData?: boolean;
+  source?: string;
 }
 
 export default function LeagueDashboard() {
@@ -70,21 +73,28 @@ export default function LeagueDashboard() {
 
   const fetchRedWingsGame = async () => {
     try {
+      console.log('🏒 Frontend: Starting to fetch Red Wings game...');
       setGameLoading(true);
+      
       const response = await fetch('/api/red-wings-schedule');
+      console.log('📡 Frontend: API response status:', response.status, response.statusText);
+      
       const data = await response.json();
+      console.log('📊 Frontend: API response data:', JSON.stringify(data, null, 2));
       
       if (response.ok) {
+        console.log('✅ Frontend: Successfully received game data');
         setRedWingsGame(data);
       } else {
-        console.error('Error fetching Red Wings game:', data.error);
+        console.error('❌ Frontend: API returned error:', data.error);
         setRedWingsGame(null);
       }
     } catch (error) {
-      console.error('Error fetching Red Wings game:', error);
+      console.error('💥 Frontend: Error fetching Red Wings game:', error);
       setRedWingsGame(null);
     } finally {
       setGameLoading(false);
+      console.log('🏁 Frontend: Finished fetching Red Wings game');
     }
   };
 
@@ -269,7 +279,7 @@ export default function LeagueDashboard() {
           </button>
           
           <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-6">
               <div>
                 <h1 className="text-4xl font-bold text-gray-900 mb-2">{league.name}</h1>
                 {league.description && (
@@ -279,6 +289,19 @@ export default function LeagueDashboard() {
               <div className="text-right">
                 <div className="text-gray-500 text-sm">Created</div>
                 <div className="text-gray-900">{new Date(league.created_at).toLocaleDateString()}</div>
+              </div>
+            </div>
+            
+            {/* League Pot Display */}
+            <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 mb-6 text-white shadow-lg">
+              <div className="text-center">
+                <div className="text-sm font-medium text-green-100 mb-1">LEAGUE POT</div>
+                <div className="text-4xl font-bold">
+                  ${(league.pot_amount || 0).toLocaleString()}
+                </div>
+                <div className="text-green-200 text-sm mt-1">
+                  {members.length} member{members.length !== 1 ? 's' : ''} • ${Math.round((league.pot_amount || 0) / Math.max(members.length, 1))} per member
+                </div>
               </div>
             </div>
             
@@ -323,6 +346,16 @@ export default function LeagueDashboard() {
               <div className="text-sm text-red-500 mt-1">
                 {redWingsGame.venue} • {redWingsGame.status}
               </div>
+              {redWingsGame.isMockData && (
+                <div className="text-xs text-red-400 mt-2 italic">
+                  ⚠️ Mock data - API unavailable
+                </div>
+              )}
+              {redWingsGame.source && !redWingsGame.isMockData && (
+                <div className="text-xs text-red-500 mt-2">
+                  📡 Data from {redWingsGame.source}
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-lg">

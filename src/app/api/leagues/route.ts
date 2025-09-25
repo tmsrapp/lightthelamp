@@ -52,13 +52,14 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAPIClient();
 
-    // Create the league
+    // Create the league with default pot amount
     const { data: league, error } = await supabase
       .from('leagues')
       .insert({
         name: name.trim(),
         description: description?.trim() || null,
-        created_by: userId
+        created_by: userId,
+        pot_amount: 0 // Default pot amount
       })
       .select()
       .single();
