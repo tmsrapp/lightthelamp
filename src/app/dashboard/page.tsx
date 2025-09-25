@@ -115,6 +115,7 @@ export default function Dashboard() {
         body: JSON.stringify({
           name: newLeagueName,
           description: newLeagueDescription,
+          userId: user.id,
         }),
       });
 
@@ -143,7 +144,7 @@ export default function Dashboard() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ leagueId }),
+        body: JSON.stringify({ leagueId, userId: user.id }),
       });
 
       const data = await response.json();
@@ -161,7 +162,7 @@ export default function Dashboard() {
 
   const handleLeaveLeague = async (leagueId: string) => {
     try {
-      const response = await fetch(`/api/leagues/join?leagueId=${leagueId}`, {
+      const response = await fetch(`/api/leagues/join?leagueId=${leagueId}&userId=${user.id}`, {
         method: 'DELETE',
       });
 

@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClientForAPI } from '@/lib/supabase-server';
+import { createClient } from '@supabase/supabase-js';
+
+// Create a client for API routes using service role key
+function createAPIClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function GET(request: NextRequest) {
   try {
     console.log('API GET: Fetching leagues...');
-    const supabase = createClientForAPI(request);
+    const supabase = createAPIClient();
     
     // Get leagues with member count
     const { data: leagues, error } = await supabase
@@ -30,34 +38,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Debug: Log cookies
-    const cookieHeader = request.headers.get('cookie');
-    console.log('API: Received cookies:', cookieHeader);
+    const { name, description, userId } = await request.json();
     
-    const supabase = createClientForAPI(request);
-    
-    // Get the current user
-    console.log('API: Getting user for league creation...');
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    console.log('API: User result:', { user: user?.email, authError });
-    
-    if (authError) {
-      console.error('API: Auth error:', authError);
-      return NextResponse.json({ error: 'Authentication error: ' + authError.message }, { status: 401 });
-    }
-    
-    if (!user) {
-      console.log('API: No user found');
-      return NextResponse.json({ error: 'Unauthorized - please log in' }, { status: 401 });
-    }
+    console.log('API: Creating league for user:', userId);
 
-    const { name, description } = await request.json();
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
 
     if (!name || name.trim().length === 0) {
       return NextResponse.json({ error: 'League name is required' }, { status: 400 });
     }
 
-    console.log('API: Creating league for user:', user.email);
+    const supabase = createAPIClient();
 
     // Create the league
     const { data: league, error } = await supabase
@@ -65,7 +58,7 @@ export async function POST(request: NextRequest) {
       .insert({
         name: name.trim(),
         description: description?.trim() || null,
-        created_by: user.id
+        created_by: userId
       })
       .select()
       .single();
@@ -80,7 +73,7 @@ export async function POST(request: NextRequest) {
       .from('league_memberships')
       .insert({
         league_id: league.id,
-        user_id: user.id
+        user_id: userId
       });
 
     if (membershipError) {
