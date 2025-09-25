@@ -1,103 +1,353 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const router = useRouter();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    const checkUser = async () => {
+      // Skip auth check if Supabase is not configured
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL === 'your_supabase_project_url' || 
+          !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        return;
+      }
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        router.push('/dashboard');
+      }
+    };
+    checkUser();
+  }, [router]);
+
+  // Email validation
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Check for common invalid email patterns
+  const isEmailValidForSupabase = (email: string) => {
+    // Check for common test domains that might be blocked
+    const blockedDomains = ['example.com', 'test.com', 'localhost'];
+    const domain = email.split('@')[1]?.toLowerCase();
+    
+    if (blockedDomains.includes(domain)) {
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Password validation
+  const validatePassword = (password: string) => {
+    if (password.length < 6) {
+      return 'Password must be at least 6 characters long';
+    }
+    return '';
+  };
+
+  // Real-time validation
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+    if (value && !validateEmail(value)) {
+      setEmailError('Please enter a valid email address');
+    } else if (value && !isEmailValidForSupabase(value)) {
+      setEmailError('Please use a real email address (not example.com, test.com, etc.)');
+    } else {
+      setEmailError('');
+    }
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setPassword(value);
+    const error = validatePassword(value);
+    setPasswordError(error);
+    
+    // Also validate confirm password if it exists
+    if (confirmPassword && value !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+    } else if (confirmPassword && value === confirmPassword) {
+      setPasswordError('');
+    }
+  };
+
+  const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setConfirmPassword(value);
+    if (value && password !== value) {
+      setPasswordError('Passwords do not match');
+    } else {
+      setPasswordError('');
+    }
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+    setEmailError('');
+    setPasswordError('');
+
+    // Check if Supabase is configured
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL === 'your_supabase_project_url' || 
+        !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      setMessage('Please configure your Supabase credentials in .env.local to enable authentication.');
+      setLoading(false);
+      return;
+    }
+
+    // Validate email
+    if (!validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
+      setLoading(false);
+      return;
+    }
+
+    // Check if email is valid for Supabase
+    if (!isEmailValidForSupabase(email)) {
+      setEmailError('Please use a real email address (not example.com, test.com, etc.)');
+      setLoading(false);
+      return;
+    }
+
+    // Validate password
+    const passwordValidationError = validatePassword(password);
+    if (passwordValidationError) {
+      setPasswordError(passwordValidationError);
+      setLoading(false);
+      return;
+    }
+
+    // For signup, validate password confirmation
+    if (isSignUp) {
+      if (password !== confirmPassword) {
+        setPasswordError('Passwords do not match');
+        setLoading(false);
+        return;
+      }
+    }
+
+    try {
+      if (isSignUp) {
+        console.log('Attempting signup with:', { email, password: '***' });
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/dashboard`
+          }
+        });
+        console.log('Signup response:', { data, error });
+        if (error) throw error;
+        
+        if (data.user && !data.user.email_confirmed_at) {
+          setMessage('✅ Account created! Please check your email and click the confirmation link, then you can sign in.');
+          // Switch to sign in mode after successful signup
+          setTimeout(() => {
+            setIsSignUp(false);
+            setPassword('');
+            setConfirmPassword('');
+          }, 3000);
+        } else if (data.user && data.user.email_confirmed_at) {
+          setMessage('✅ Account created and confirmed! You can now sign in.');
+          setIsSignUp(false);
+          setPassword('');
+          setConfirmPassword('');
+        } else {
+          setMessage('✅ Account created successfully! You can now sign in.');
+          setIsSignUp(false);
+          setPassword('');
+          setConfirmPassword('');
+        }
+      } else {
+        console.log('Attempting signin with:', { email, password: '***' });
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        console.log('Signin response:', { data, error });
+        if (error) throw error;
+        setMessage('Successfully signed in! Redirecting...');
+        router.push('/dashboard');
+      }
+    } catch (error: unknown) {
+      console.error('Auth error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      
+      if (errorMessage.includes('Invalid login credentials')) {
+        setMessage('Invalid email or password. Please try again.');
+      } else if (errorMessage.includes('User already registered')) {
+        setMessage('An account with this email already exists. Please sign in instead.');
+        setIsSignUp(false);
+      } else if (errorMessage.includes('Email not confirmed')) {
+        setMessage('Please check your email and click the confirmation link before signing in.');
+      } else if (errorMessage.includes('Invalid email') || errorMessage.includes('is invalid')) {
+        setMessage('Please use a real email address (not example.com, test.com, etc.)');
+        setEmailError('Please use a real email address');
+      } else if (errorMessage.includes('Password should be at least')) {
+        setMessage('Password must be at least 6 characters long.');
+      } else {
+        setMessage(`Error: ${errorMessage}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-4">
+      <div className="max-w-md w-full space-y-8">
+        {/* Logo and Title */}
+        <div className="text-center">
+          <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-4">
+            <div className="text-4xl font-bold text-blue-900">🏒</div>
+          </div>
+          <h1 className="text-4xl font-bold text-white mb-2">Light The Lamp</h1>
+          <p className="text-blue-200 text-lg">NHL Fantasy League</p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Auth Form */}
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
+          <form onSubmit={handleAuth} className="space-y-6">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={handleEmailChange}
+                className={`w-full px-4 py-3 bg-white/20 border rounded-lg text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:border-transparent ${
+                  emailError 
+                    ? 'border-red-400 focus:ring-red-500' 
+                    : 'border-white/30 focus:ring-blue-500'
+                }`}
+                placeholder="Enter your real email address"
+              />
+              {emailError && (
+                <p className="mt-1 text-sm text-red-300">{emailError}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={handlePasswordChange}
+                className={`w-full px-4 py-3 bg-white/20 border rounded-lg text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:border-transparent ${
+                  passwordError 
+                    ? 'border-red-400 focus:ring-red-500' 
+                    : 'border-white/30 focus:ring-blue-500'
+                }`}
+                placeholder="Enter your password"
+              />
+              {passwordError && (
+                <p className="mt-1 text-sm text-red-300">{passwordError}</p>
+              )}
+            </div>
+
+            {isSignUp && (
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-white mb-2">
+                  Confirm Password
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  required={isSignUp}
+                  value={confirmPassword}
+                  onChange={handleConfirmPasswordChange}
+                  className={`w-full px-4 py-3 bg-white/20 border rounded-lg text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:border-transparent ${
+                    passwordError && confirmPassword
+                      ? 'border-red-400 focus:ring-red-500' 
+                      : 'border-white/30 focus:ring-blue-500'
+                  }`}
+                  placeholder="Confirm your password"
+                />
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || !!emailError || !!passwordError}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 ease-in-out transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+            </button>
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setPassword('');
+                  setConfirmPassword('');
+                  setEmailError('');
+                  setPasswordError('');
+                  setMessage('');
+                }}
+                className="text-blue-200 hover:text-white text-sm font-medium transition duration-200"
+              >
+                {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+              </button>
+            </div>
+          </form>
+
+          {message && (
+            <div className={`mt-4 p-3 rounded-lg text-sm ${
+              message.includes('error') || message.includes('Error') || message.includes('Invalid') || message.includes('already exists')
+                ? 'bg-red-500/20 text-red-200 border border-red-500/30' 
+                : 'bg-green-500/20 text-green-200 border border-green-500/30'
+            }`}>
+              {message}
+            </div>
+          )}
+        </div>
+
+        {/* Setup Instructions */}
+        {(!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'your_supabase_project_url') && (
+          <div className="bg-yellow-500/20 backdrop-blur-lg rounded-2xl p-6 border border-yellow-500/30">
+            <h3 className="text-lg font-semibold text-yellow-200 mb-2">🚀 Setup Required</h3>
+            <p className="text-yellow-100 text-sm mb-3">
+              To enable authentication, please configure your Supabase credentials:
+            </p>
+            <ol className="text-yellow-100 text-sm space-y-1 text-left">
+              <li>1. Create a project at <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="underline">supabase.com</a></li>
+              <li>2. Copy your project URL and anon key</li>
+              <li>3. Update .env.local with your credentials</li>
+              <li>4. Restart the development server</li>
+            </ol>
+          </div>
+        )}
+
+        {/* Features Preview */}
+        <div className="text-center text-white/80 text-sm space-y-2">
+          <p>🏆 Join leagues for your favorite NHL team</p>
+          <p>⚡ Pick players and earn points based on performance</p>
+          <p>🔄 Snake draft ensures fair player selection</p>
+        </div>
+      </div>
     </div>
   );
 }
