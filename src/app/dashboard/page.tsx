@@ -213,7 +213,7 @@ export default function Dashboard() {
               <span className="text-gray-600">Welcome, {user.email}</span>
               <button
                 onClick={handleSignOut}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-200"
+                className="bg-white hover:bg-gray-50 text-red-600 px-4 py-2 rounded-lg border border-red-600 transition duration-200"
               >
                 Sign Out
               </button>
@@ -231,7 +231,7 @@ export default function Dashboard() {
           </div>
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition duration-200 font-semibold"
+            className="bg-white hover:bg-gray-50 text-green-600 px-6 py-3 rounded-lg border border-green-600 transition duration-200 font-semibold"
           >
             {showCreateForm ? 'Cancel' : '+ Create League'}
           </button>
@@ -273,14 +273,14 @@ export default function Dashboard() {
                 <button
                   type="submit"
                   disabled={creatingLeague || !newLeagueName.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-6 py-2 rounded-lg transition duration-200 font-semibold"
+                  className="bg-white hover:bg-gray-50 disabled:bg-gray-100 text-blue-600 disabled:text-gray-400 px-6 py-2 rounded-lg border border-blue-600 disabled:border-gray-300 transition duration-200 font-semibold"
                 >
                   {creatingLeague ? 'Creating...' : 'Create League'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowCreateForm(false)}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition duration-200 font-semibold"
+                  className="bg-white hover:bg-gray-50 text-gray-600 px-6 py-2 rounded-lg border border-gray-600 transition duration-200 font-semibold"
                 >
                   Cancel
                 </button>
@@ -331,35 +331,27 @@ export default function Dashboard() {
                     </div>
                     <div className="ml-4 flex flex-col space-y-2">
                       {isMember ? (
-                        <>
-                          <button
-                            onClick={() => router.push(`/dashboard/league/${league.id}`)}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200 font-semibold"
-                          >
-                            View League
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleLeaveLeague(league.id);
-                            }}
-                            disabled={isCreator}
-                            className={`px-4 py-2 rounded-lg transition duration-200 font-semibold ${
-                              isCreator
-                                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                                : 'bg-red-600 hover:bg-red-700 text-white'
-                            }`}
-                          >
-                            {isCreator ? 'Creator' : 'Leave'}
-                          </button>
-                        </>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLeaveLeague(league.id);
+                          }}
+                          disabled={isCreator}
+                          className={`px-4 py-2 rounded-lg border transition duration-200 font-semibold ${
+                            isCreator
+                              ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
+                              : 'bg-white hover:bg-gray-50 text-red-600 border-red-600'
+                          }`}
+                        >
+                          {isCreator ? 'Creator' : 'Leave'}
+                        </button>
                       ) : (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleJoinLeague(league.id);
                           }}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 font-semibold"
+                          className="bg-white hover:bg-gray-50 text-blue-600 px-4 py-2 rounded-lg border border-blue-600 transition duration-200 font-semibold"
                         >
                           Join
                         </button>

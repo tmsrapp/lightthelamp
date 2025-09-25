@@ -29,12 +29,26 @@ interface LeagueMember {
   user_profiles: UserProfile;
 }
 
+interface RedWingsGame {
+  gameId: string;
+  date: string;
+  time: string;
+  opponent: string;
+  isHomeGame: boolean;
+  venue: string;
+  status: string;
+  gameDate: string;
+  error?: string;
+}
+
 export default function LeagueDashboard() {
   const [user, setUser] = useState<any>(null);
   const [league, setLeague] = useState<League | null>(null);
   const [members, setMembers] = useState<LeagueMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMember, setIsMember] = useState(false);
+  const [redWingsGame, setRedWingsGame] = useState<RedWingsGame | null>(null);
+  const [gameLoading, setGameLoading] = useState(true);
   const router = useRouter();
   const params = useParams();
   const leagueId = params.id as string;
@@ -53,6 +67,26 @@ export default function LeagueDashboard() {
     
     getUser();
   }, [router]);
+
+  const fetchRedWingsGame = async () => {
+    try {
+      setGameLoading(true);
+      const response = await fetch('/api/red-wings-schedule');
+      const data = await response.json();
+      
+      if (response.ok) {
+        setRedWingsGame(data);
+      } else {
+        console.error('Error fetching Red Wings game:', data.error);
+        setRedWingsGame(null);
+      }
+    } catch (error) {
+      console.error('Error fetching Red Wings game:', error);
+      setRedWingsGame(null);
+    } finally {
+      setGameLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user || !leagueId) return;
@@ -126,6 +160,7 @@ export default function LeagueDashboard() {
     };
 
     fetchLeagueData();
+    fetchRedWingsGame();
   }, [user, leagueId, router]);
 
   const handleJoinLeague = async () => {
@@ -255,20 +290,51 @@ export default function LeagueDashboard() {
               {isMember ? (
                 <button
                   onClick={handleLeaveLeague}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-200"
+                  className="bg-white hover:bg-gray-50 text-red-600 px-4 py-2 rounded-lg border border-red-600 transition duration-200"
                 >
                   Leave League
                 </button>
               ) : (
                 <button
                   onClick={handleJoinLeague}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200"
+                  className="bg-white hover:bg-gray-50 text-green-600 px-4 py-2 rounded-lg border border-green-600 transition duration-200"
                 >
                   Join League
                 </button>
               )}
             </div>
           </div>
+        </div>
+
+        {/* Red Wings Next Game */}
+        <div className="bg-white border border-red-600 text-red-600 rounded-2xl p-6 shadow-lg mb-8">
+          <h2 className="text-2xl font-bold mb-2">🏒 Detroit Red Wings</h2>
+          {gameLoading ? (
+            <div className="text-lg">
+              <div className="font-semibold">Next Game</div>
+              <div className="text-red-400">Loading game schedule...</div>
+            </div>
+          ) : redWingsGame && !redWingsGame.error ? (
+            <div className="text-lg">
+              <div className="font-semibold">Next Game</div>
+              <div className="text-red-600">
+                {redWingsGame.isHomeGame ? 'vs.' : '@'} {redWingsGame.opponent} - {redWingsGame.date} at {redWingsGame.time}
+              </div>
+              <div className="text-sm text-red-500 mt-1">
+                {redWingsGame.venue} • {redWingsGame.status}
+              </div>
+            </div>
+          ) : (
+            <div className="text-lg">
+              <div className="font-semibold">Next Game</div>
+              <div className="text-red-400">
+                No upcoming games scheduled
+              </div>
+              <div className="text-sm text-red-300 mt-1">
+                Check back later for updated schedule
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Members Section */}
@@ -280,7 +346,7 @@ export default function LeagueDashboard() {
               No members yet. Be the first to join!
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-4">
               {members.map((member) => (
                 <div
                   key={member.id}
@@ -310,17 +376,6 @@ export default function LeagueDashboard() {
               ))}
             </div>
           )}
-        </div>
-
-        {/* Future sections will go here */}
-        <div className="mt-8 bg-gray-50 border border-gray-200 rounded-2xl p-8 shadow-lg">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Coming Soon</h2>
-          <div className="text-gray-600 space-y-2">
-            <p>🏆 Draft System</p>
-            <p>⚡ Player Selection</p>
-            <p>📊 Live Scoring</p>
-            <p>🔄 Trade System</p>
-          </div>
         </div>
       </div>
     </div>

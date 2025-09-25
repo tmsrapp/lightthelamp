@@ -316,7 +316,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={loading || !!emailError || !!passwordError}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 ease-in-out transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed"
+              className="w-full bg-white hover:bg-gray-50 disabled:bg-gray-100 text-blue-600 disabled:text-gray-400 font-semibold py-3 px-4 rounded-lg border border-blue-600 disabled:border-gray-300 transition duration-200 ease-in-out transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed"
             >
               {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
             </button>
