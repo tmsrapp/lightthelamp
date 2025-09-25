@@ -20,14 +20,36 @@ export default function Home() {
       // Skip auth check if Supabase is not configured
       if (process.env.NEXT_PUBLIC_SUPABASE_URL === 'your_supabase_project_url' || 
           !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        console.log('Supabase not configured, skipping auth check');
         return;
       }
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      console.log('Checking for existing user...');
+      
+      // Listen for auth state changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('User signed in, redirecting to dashboard');
+          router.push('/dashboard');
+        }
+      });
+      
+      // Check current session
+      const { data: { session }, error } = await supabase.auth.getSession();
+      console.log('Session check result:', { session: session?.user?.email, error });
+      
+      if (session?.user) {
+        console.log('User found in session, redirecting to dashboard');
         router.push('/dashboard');
+      } else {
+        console.log('No user found, staying on login page');
       }
+      
+      // Cleanup subscription on unmount
+      return () => subscription.unsubscribe();
     };
+    
     checkUser();
   }, [router]);
 
@@ -181,8 +203,11 @@ export default function Home() {
         });
         console.log('Signin response:', { data, error });
         if (error) throw error;
+        
+        console.log('Sign in successful, user:', data.user?.email);
         setMessage('Successfully signed in! Redirecting...');
-        router.push('/dashboard');
+        
+        // The auth state change listener will handle the redirect
       }
     } catch (error: unknown) {
       console.error('Auth error:', error);
