@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 interface League {
   id: string;
@@ -44,8 +47,13 @@ interface RedWingsGame {
   source?: string;
 }
 
+interface User {
+  id: string;
+  email?: string;
+}
+
 export default function LeagueDashboard() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [league, setLeague] = useState<League | null>(null);
   const [members, setMembers] = useState<LeagueMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +69,10 @@ export default function LeagueDashboard() {
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (!session?.user) {
-        router.push('/');
+        // Only redirect if we're not already on the home page
+        if (window.location.pathname !== '/') {
+          router.push('/');
+        }
         return;
       }
       
@@ -69,7 +80,7 @@ export default function LeagueDashboard() {
     };
     
     getUser();
-  }, [router]);
+  }, []); // Removed router dependency to prevent infinite loop
 
   const fetchRedWingsGame = async () => {
     try {
@@ -249,49 +260,52 @@ export default function LeagueDashboard() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-gray-900 text-xl">Loading league...</div>
-      </div>
-    );
-  }
+  // Removed loading screen - show content immediately
 
   if (!league) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-gray-900 text-xl">League not found</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground text-xl">League not found</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              onClick={() => router.push('/dashboard')}
+              className="flex items-center space-x-2"
+            >
+              <div className="text-2xl">🚨</div>
+              <h1 className="text-2xl font-bold">Light The Lamp</h1>
+            </Button>
+          </div>
+        </div>
+      </header>
+
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="text-blue-600 hover:text-blue-800 mb-4 flex items-center space-x-2"
-          >
-            <span>←</span>
-            <span>Back to Dashboard</span>
-          </button>
-          
-          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 shadow-lg">
-            <div className="flex items-center justify-between mb-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">{league.name}</h1>
+                <CardTitle className="text-4xl font-bold">{league.name}</CardTitle>
                 {league.description && (
-                  <p className="text-gray-600 text-lg">{league.description}</p>
+                  <CardDescription className="text-lg">{league.description}</CardDescription>
                 )}
               </div>
               <div className="text-right">
-                <div className="text-gray-500 text-sm">Created</div>
-                <div className="text-gray-900">{new Date(league.created_at).toLocaleDateString()}</div>
+                <div className="text-muted-foreground text-sm">Created</div>
+                <div className="text-foreground">{new Date(league.created_at).toLocaleDateString()}</div>
               </div>
             </div>
-            
+          </CardHeader>
+          
+          <CardContent>
             {/* League Pot Display */}
             <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 mb-6 text-white shadow-lg">
               <div className="text-center">
@@ -305,111 +319,115 @@ export default function LeagueDashboard() {
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <div className="text-gray-600">
-                <span className="font-semibold">{members.length}</span> members
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Badge variant="secondary" className="text-sm">
+                  {members.length} members
+                </Badge>
               </div>
               
-              {isMember ? (
-                <button
-                  onClick={handleLeaveLeague}
-                  className="bg-white hover:bg-gray-50 text-red-600 px-4 py-2 rounded-lg border border-red-600 transition duration-200"
-                >
-                  Leave League
-                </button>
-              ) : (
-                <button
-                  onClick={handleJoinLeague}
-                  className="bg-white hover:bg-gray-50 text-green-600 px-4 py-2 rounded-lg border border-green-600 transition duration-200"
-                >
-                  Join League
-                </button>
-              )}
+              <div>
+                {isMember ? (
+                  <Button
+                    onClick={handleLeaveLeague}
+                    variant="destructive"
+                  >
+                    Leave League
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleJoinLeague}
+                  >
+                    Join League
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Red Wings Next Game */}
-        <div className="bg-white border border-red-600 text-red-600 rounded-2xl p-6 shadow-lg mb-8">
-          <h2 className="text-2xl font-bold mb-2">🏒 Detroit Red Wings</h2>
-          {gameLoading ? (
-            <div className="text-lg">
-              <div className="font-semibold">Next Game</div>
-              <div className="text-red-400">Loading game schedule...</div>
-            </div>
-          ) : redWingsGame && !redWingsGame.error ? (
-            <div className="text-lg">
-              <div className="font-semibold">Next Game</div>
-              <div className="text-red-600">
-                {redWingsGame.isHomeGame ? 'vs.' : '@'} {redWingsGame.opponent} - {redWingsGame.date} at {redWingsGame.time}
-              </div>
-              <div className="text-sm text-red-500 mt-1">
-                {redWingsGame.venue} • {redWingsGame.status}
-              </div>
-              {redWingsGame.isMockData && (
-                <div className="text-xs text-red-400 mt-2 italic">
-                  ⚠️ Mock data - API unavailable
+        <Card className="mb-8 border-red-200">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-red-600">🏒 Detroit Red Wings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {redWingsGame && !redWingsGame.error ? (
+              <div className="text-lg">
+                <div className="font-semibold text-foreground">Next Game</div>
+                <div className="text-red-600">
+                  {redWingsGame.isHomeGame ? 'vs.' : '@'} {redWingsGame.opponent} - {redWingsGame.date} at {redWingsGame.time}
                 </div>
-              )}
-              {redWingsGame.source && !redWingsGame.isMockData && (
-                <div className="text-xs text-red-500 mt-2">
-                  📡 Data from {redWingsGame.source}
+                <div className="text-sm text-muted-foreground mt-1">
+                  {redWingsGame.venue} • {redWingsGame.status}
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-lg">
-              <div className="font-semibold">Next Game</div>
-              <div className="text-red-400">
-                No upcoming games scheduled
+                {redWingsGame.isMockData && (
+                  <Badge variant="outline" className="mt-2 text-xs">
+                    ⚠️ Mock data - API unavailable
+                  </Badge>
+                )}
+                {redWingsGame.source && !redWingsGame.isMockData && (
+                  <div className="text-xs text-muted-foreground mt-2">
+                    📡 Data from {redWingsGame.source}
+                  </div>
+                )}
               </div>
-              <div className="text-sm text-red-300 mt-1">
-                Check back later for updated schedule
+            ) : (
+              <div className="text-lg">
+                <div className="font-semibold text-foreground">Next Game</div>
+                <div className="text-muted-foreground">
+                  No upcoming games scheduled
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Check back later for updated schedule
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Members Section */}
-        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 shadow-lg">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">League Members</h2>
-          
-          {members.length === 0 ? (
-            <div className="text-center text-gray-600 py-8">
-              No members yet. Be the first to join!
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {members.map((member) => (
-                <div
-                  key={member.id}
-                  className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                      {member.user_profiles?.display_name?.charAt(0) || 
-                       member.user_profiles?.user_id?.charAt(0) || 
-                       '?'}
-                    </div>
-                    <div>
-                      <div className="text-gray-900 font-medium">
-                        {member.user_profiles?.display_name || 'Anonymous User'}
-                      </div>
-                      <div className="text-gray-500 text-sm">
-                        Joined {new Date(member.joined_at).toLocaleDateString()}
-                      </div>
-                      {member.user_profiles?.favorite_team && (
-                        <div className="text-blue-600 text-xs">
-                          🏒 {member.user_profiles.favorite_team}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold">League Members</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {members.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                No members yet. Be the first to join!
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {members.map((member) => (
+                  <Card key={member.id} className="bg-muted/50">
+                    <CardContent className="pt-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold">
+                          {member.user_profiles?.display_name?.charAt(0) || 
+                           member.user_profiles?.user_id?.charAt(0) || 
+                           '?'}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                        <div>
+                          <div className="font-medium">
+                            {member.user_profiles?.display_name || 'Anonymous User'}
+                          </div>
+                          <div className="text-muted-foreground text-sm">
+                            Joined {new Date(member.joined_at).toLocaleDateString()}
+                          </div>
+                          {member.user_profiles?.favorite_team && (
+                            <Badge variant="outline" className="text-xs mt-1">
+                              🏒 {member.user_profiles.favorite_team}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

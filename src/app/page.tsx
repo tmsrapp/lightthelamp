@@ -3,6 +3,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+interface User {
+  id: string;
+  email?: string;
+}
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -13,6 +22,8 @@ export default function Home() {
   const [message, setMessage] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -29,6 +40,7 @@ export default function Home() {
       // Listen for auth state changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         console.log('Auth state change:', event, session?.user?.email);
+        setUser(session?.user || null);
         if (event === 'SIGNED_IN' && session?.user) {
           console.log('User signed in, redirecting to dashboard');
           router.push('/dashboard');
@@ -38,6 +50,8 @@ export default function Home() {
       // Check current session
       const { data: { session }, error } = await supabase.auth.getSession();
       console.log('Session check result:', { session: session?.user?.email, error });
+      
+      setUser(session?.user || null);
       
       if (session?.user) {
         console.log('User found in session, redirecting to dashboard');
@@ -234,145 +248,236 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
-      <div className="max-w-md w-full space-y-8">
-        {/* Logo and Title */}
-        <div className="text-center">
-          <div className="mx-auto h-20 w-20 bg-blue-600 rounded-full flex items-center justify-center mb-4">
-            <div className="text-4xl font-bold text-white">🏒</div>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              onClick={() => user ? router.push('/dashboard') : window.location.reload()}
+              className="flex items-center space-x-2"
+            >
+              <div className="text-2xl">🚨</div>
+              <h1 className="text-2xl font-bold">Light The Lamp</h1>
+            </Button>
+            <div className="flex items-center space-x-4">
+              {user ? (
+                <>
+                  <span className="text-muted-foreground hidden md:block">Welcome, {user.email}</span>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => router.push('/dashboard')}
+                  >
+                    Dashboard
+                  </Button>
+                </>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowAuthModal(true)}
+                  className="hidden md:block"
+                >
+                  Sign In
+                </Button>
+              )}
+            </div>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Light The Lamp</h1>
-          <p className="text-gray-600 text-lg">NHL Fantasy League</p>
         </div>
+      </header>
 
-        {/* Auth Form */}
-        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 shadow-lg">
-          <form onSubmit={handleAuth} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={handleEmailChange}
-                className={`w-full px-4 py-3 bg-white border rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent ${
-                  emailError 
-                    ? 'border-red-400 focus:ring-red-500' 
-                    : 'border-gray-300 focus:ring-blue-500'
-                }`}
-                placeholder="Enter your real email address"
-              />
-              {emailError && (
-                <p className="mt-1 text-sm text-red-600">{emailError}</p>
-              )}
-            </div>
+      {/* Hero Section */}
+      <section className="py-20 px-4">
+        <div className="container mx-auto text-center">
+          <h2 className="text-4xl md:text-6xl font-bold mb-6">
+            Light The Lamp
+            <span className="text-primary block">Reimagined</span>
+          </h2>
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Join leagues, pick players, and compete with friends in the ultimate hockey experience. 
+            Snake drafts, live scoring, and real-time updates.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" onClick={() => { setShowAuthModal(true); setIsSignUp(false); }}>
+              Get Started
+            </Button>
+            <Button size="lg" variant="outline" onClick={() => { setShowAuthModal(true); setIsSignUp(true); }}>
+              Create Account
+            </Button>
+          </div>
+        </div>
+      </section>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={handlePasswordChange}
-                className={`w-full px-4 py-3 bg-white border rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent ${
-                  passwordError 
-                    ? 'border-red-400 focus:ring-red-500' 
-                    : 'border-gray-300 focus:ring-blue-500'
-                }`}
-                placeholder="Enter your password"
-              />
-              {passwordError && (
-                <p className="mt-1 text-sm text-red-600">{passwordError}</p>
-              )}
-            </div>
+      {/* Features Section */}
+      <section className="py-20 px-4 bg-muted/50">
+        <div className="container mx-auto">
+          <h3 className="text-3xl font-bold text-center mb-12">Why Choose Light The Lamp?</h3>
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card>
+              <CardHeader>
+                <div className="text-4xl mb-4">🏆</div>
+                <CardTitle>Join Any League</CardTitle>
+                <CardDescription>
+                  Create or join leagues for your favorite team. No restrictions, just pure hockey fun.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader>
+                <div className="text-4xl mb-4">⚡</div>
+                <CardTitle>Pick Players</CardTitle>
+                <CardDescription>
+                  Select players before each game and earn points based on their real-world performance.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader>
+                <div className="text-4xl mb-4">🔄</div>
+                <CardTitle>Snake Draft</CardTitle>
+                <CardDescription>
+                  Fair player selection with rotating draft order ensures everyone gets a chance at top players.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+      </section>
 
-            {isSignUp && (
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  required={isSignUp}
-                  value={confirmPassword}
-                  onChange={handleConfirmPasswordChange}
-                  className={`w-full px-4 py-3 bg-white border rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent ${
-                    passwordError && confirmPassword
-                      ? 'border-red-400 focus:ring-red-500' 
-                      : 'border-gray-300 focus:ring-blue-500'
-                  }`}
-                  placeholder="Confirm your password"
+      {/* Auth Modal */}
+      <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 ${showAuthModal ? 'block' : 'hidden'}`}>
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
+            <CardDescription>
+              {isSignUp ? 'Join the ultimate hockey experience' : 'Welcome back to Light The Lamp'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={handleEmailChange}
+                  placeholder="Enter your email address"
                 />
+                {emailError && (
+                  <p className="text-sm text-destructive">{emailError}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={handlePasswordChange}
+                  placeholder="Enter your password"
+                />
+                {passwordError && (
+                  <p className="text-sm text-destructive">{passwordError}</p>
+                )}
+              </div>
+
+              {isSignUp && (
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    required={isSignUp}
+                    value={confirmPassword}
+                    onChange={handleConfirmPasswordChange}
+                    placeholder="Confirm your password"
+                  />
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={loading || !!emailError || !!passwordError}
+                className="w-full"
+              >
+                {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+              </Button>
+
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setPassword('');
+                    setConfirmPassword('');
+                    setEmailError('');
+                    setPasswordError('');
+                    setMessage('');
+                  }}
+                >
+                  {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                </Button>
+              </div>
+            </form>
+
+            {message && (
+              <div className={`mt-4 p-3 rounded-lg text-sm ${
+                message.includes('error') || message.includes('Error') || message.includes('Invalid') || message.includes('already exists')
+                  ? 'bg-destructive/20 text-destructive border border-destructive/30' 
+                  : 'bg-green-500/20 text-green-700 border border-green-500/30'
+              }`}>
+                {message}
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading || !!emailError || !!passwordError}
-              className="w-full bg-white hover:bg-gray-50 disabled:bg-gray-100 text-blue-600 disabled:text-gray-400 font-semibold py-3 px-4 rounded-lg border border-blue-600 disabled:border-gray-300 transition duration-200 ease-in-out transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
-            </button>
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setPassword('');
-                  setConfirmPassword('');
-                  setEmailError('');
-                  setPasswordError('');
-                  setMessage('');
-                }}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium transition duration-200"
+            <div className="mt-4 text-center">
+              <Button
+                variant="ghost"
+                onClick={() => setShowAuthModal(false)}
+                className="text-muted-foreground"
               >
-                {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-              </button>
+                Close
+              </Button>
             </div>
-          </form>
-
-          {message && (
-            <div className={`mt-4 p-3 rounded-lg text-sm ${
-              message.includes('error') || message.includes('Error') || message.includes('Invalid') || message.includes('already exists')
-                ? 'bg-red-50 text-red-700 border border-red-200' 
-                : 'bg-green-50 text-green-700 border border-green-200'
-            }`}>
-              {message}
-            </div>
-          )}
-        </div>
-
-        {/* Setup Instructions */}
-        {(!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'your_supabase_project_url') && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6">
-            <h3 className="text-lg font-semibold text-yellow-800 mb-2">🚀 Setup Required</h3>
-            <p className="text-yellow-700 text-sm mb-3">
-              To enable authentication, please configure your Supabase credentials:
-            </p>
-            <ol className="text-yellow-700 text-sm space-y-1 text-left">
-              <li>1. Create a project at <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="underline">supabase.com</a></li>
-              <li>2. Copy your project URL and anon key</li>
-              <li>3. Update .env.local with your credentials</li>
-              <li>4. Restart the development server</li>
-            </ol>
-          </div>
-        )}
-
-        {/* Features Preview */}
-        <div className="text-center text-gray-600 text-sm space-y-2">
-          <p>🏆 Join leagues for your favorite NHL team</p>
-          <p>⚡ Pick players and earn points based on performance</p>
-          <p>🔄 Snake draft ensures fair player selection</p>
-        </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Setup Instructions */}
+      {(!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'your_supabase_project_url') && (
+        <section className="py-20 px-4">
+          <div className="container mx-auto">
+            <Card className="border-yellow-200 bg-yellow-50">
+              <CardHeader>
+                <CardTitle className="text-yellow-800">🚀 Setup Required</CardTitle>
+                <CardDescription className="text-yellow-700">
+                  To enable authentication, please configure your Supabase credentials:
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ol className="text-yellow-700 text-sm space-y-1">
+                  <li>1. Create a project at <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="underline">supabase.com</a></li>
+                  <li>2. Copy your project URL and anon key</li>
+                  <li>3. Update .env.local with your credentials</li>
+                  <li>4. Restart the development server</li>
+                </ol>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
+
+      {/* Footer */}
+      <footer className="border-t py-8 px-4">
+        <div className="container mx-auto text-center text-muted-foreground">
+          <p>&copy; 2024 Light The Lamp. Built with Next.js and Supabase.</p>
+        </div>
+      </footer>
     </div>
   );
 }
