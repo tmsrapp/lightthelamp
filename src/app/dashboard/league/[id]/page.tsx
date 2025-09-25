@@ -307,13 +307,13 @@ export default function LeagueDashboard() {
           
           <CardContent>
             {/* League Pot Display */}
-            <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 mb-6 text-white shadow-lg">
+            <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-6 mb-6 text-white shadow-lg border border-red-500/20">
               <div className="text-center">
-                <div className="text-sm font-medium text-green-100 mb-1">LEAGUE POT</div>
+                <div className="text-sm font-medium text-red-100 mb-1">LEAGUE POT</div>
                 <div className="text-4xl font-bold">
                   ${(league.pot_amount || 0).toLocaleString()}
                 </div>
-                <div className="text-green-200 text-sm mt-1">
+                <div className="text-red-200 text-sm mt-1">
                   {members.length} member{members.length !== 1 ? 's' : ''} • ${Math.round((league.pot_amount || 0) / Math.max(members.length, 1))} per member
                 </div>
               </div>
@@ -347,15 +347,15 @@ export default function LeagueDashboard() {
         </Card>
 
         {/* Red Wings Next Game */}
-        <Card className="mb-8 border-red-200">
+        <Card className="mb-8 border-red-500/20">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-red-600">🏒 Detroit Red Wings</CardTitle>
+            <CardTitle className="text-2xl font-bold text-red-400">🏒 Detroit Red Wings</CardTitle>
           </CardHeader>
           <CardContent>
             {redWingsGame && !redWingsGame.error ? (
               <div className="text-lg">
                 <div className="font-semibold text-foreground">Next Game</div>
-                <div className="text-red-600">
+                <div className="text-red-400">
                   {redWingsGame.isHomeGame ? 'vs.' : '@'} {redWingsGame.opponent} - {redWingsGame.date} at {redWingsGame.time}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
