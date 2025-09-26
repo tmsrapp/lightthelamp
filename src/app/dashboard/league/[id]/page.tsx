@@ -33,6 +33,17 @@ interface LeagueMember {
   user_profiles: UserProfile;
 }
 
+interface Pick {
+  id: string;
+  league_id: string;
+  user_id: string;
+  player_name: string;
+  player_number: string;
+  player_position: string;
+  game_id: string;
+  created_at: string;
+}
+
 interface RedWingsGame {
   gameId: string;
   date: string;
@@ -62,6 +73,10 @@ export default function LeagueDashboard() {
   const [gameLoading, setGameLoading] = useState(true);
   const [liveRoster, setLiveRoster] = useState<any[]>([]);
   const [rosterLoading, setRosterLoading] = useState(true);
+  const [picks, setPicks] = useState<Pick[]>([]);
+  const [picksLoading, setPicksLoading] = useState(true);
+  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
+  const [pickingUser, setPickingUser] = useState<string | null>(null);
   const router = useRouter();
   const params = useParams();
   const leagueId = params.id as string;
@@ -137,7 +152,126 @@ export default function LeagueDashboard() {
     }
   };
 
+  const fetchPicks = async () => {
+    try {
+      console.log('🎯 Frontend: Starting to fetch picks...');
+      setPicksLoading(true);
+      
+      // Try to fetch picks from API, but fall back to demo mode if it fails
+      try {
+        const response = await fetch(`/api/picks?leagueId=${leagueId}`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('✅ Frontend: Successfully received picks data');
+          setPicks(data.picks || []);
+          
+          // Determine whose turn it is - first member who hasn't picked yet
+          const pickedUserIds = data.picks.map((pick: Pick) => pick.user_id);
+          const nextUser = members.find(member => !pickedUserIds.includes(member.user_id));
+          // Only set picking user if it's not already set
+          if (!pickingUser) {
+            setPickingUser(nextUser?.user_id || null);
+          }
+        } else {
+          throw new Error('API not available');
+        }
+      } catch (apiError) {
+        console.log('📊 Frontend: Using demo mode (database table not created yet)');
+        setPicks([]);
+        console.log('🎯 Demo mode: Current picking user is:', pickingUser);
+        
+        // In demo mode, ensure we have a picking user if members are loaded
+        if (members.length > 0 && !pickingUser) {
+          setPickingUser(members[0].user_id);
+          console.log('🎯 Demo mode: Set picking user to first member:', members[0].user_profiles?.display_name);
+        } else if (pickingUser) {
+          console.log('🎯 Demo mode: Picking user already set:', pickingUser);
+        }
+      }
+      
+    } catch (error) {
+      console.error('💥 Frontend: Error fetching picks:', error);
+      setPicks([]);
+    } finally {
+      setPicksLoading(false);
+    }
+  };
+
+  const makePick = async (player: any) => {
+    console.log('🎯 makePick called:', {
+      user: user?.id,
+      pickingUser,
+      isUserTurn: pickingUser === user?.id,
+      player: player.name
+    });
+    
+    if (!user || !pickingUser || pickingUser !== user.id) {
+      console.log('❌ Not your turn to pick');
+      return;
+    }
+
+    try {
+      console.log('🎯 Frontend: Making pick for player:', player.name);
+      
+      // Try to save pick to database first
+      try {
+        const response = await fetch('/api/picks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            leagueId,
+            userId: user.id,
+            playerName: player.name,
+            playerNumber: player.number,
+            playerPosition: player.position,
+            gameId: redWingsGame?.gameId
+          }),
+        });
+
+        if (response.ok) {
+          console.log('✅ Frontend: Successfully saved pick to database');
+          // Refresh picks to update the UI
+          await fetchPicks();
+          return;
+        } else {
+          throw new Error('API not available');
+        }
+      } catch (apiError) {
+        // Fall back to demo mode
+        console.log('📊 Frontend: Using demo mode for pick');
+        
+        // Add the pick to local state
+        const newPick = {
+          id: `demo-${Date.now()}`,
+          league_id: leagueId,
+          user_id: user.id,
+          player_name: player.name,
+          player_number: player.number,
+          player_position: player.position,
+          game_id: redWingsGame?.gameId || 'demo-game',
+          created_at: new Date().toISOString()
+        };
+        
+        setPicks(prevPicks => [...prevPicks, newPick]);
+        
+        // Move to next user
+        const currentIndex = members.findIndex(m => m.user_id === pickingUser);
+        const nextIndex = (currentIndex + 1) % members.length;
+        setPickingUser(members[nextIndex]?.user_id || null);
+        
+        console.log('✅ Demo mode: Pick saved, moved to next user');
+      }
+      
+    } catch (error) {
+      console.error('💥 Frontend: Error making pick:', error);
+      alert('Error making pick. Please try again.');
+    }
+  };
+
   useEffect(() => {
+    console.log('🎯 useEffect triggered:', { user: user?.id, leagueId });
     if (!user || !leagueId) return;
     
     const fetchLeagueData = async () => {
@@ -182,10 +316,18 @@ export default function LeagueDashboard() {
         });
         setIsMember(isUserMember);
 
-        // For now, create mock user profiles until the table is created
-        const membersWithProfiles = (allMembersData || []).map(member => {
-          // If this is the current user, use their email, otherwise show Anonymous User
-          const displayName = member.user_id === user.id ? user.email : 'Anonymous User';
+        // Create user profiles with better names
+        const membersWithProfiles = (allMembersData || []).map((member, index) => {
+          // Generate better names for users
+          const names = [
+            'Alex Johnson', 'Sarah Williams', 'Mike Chen', 'Emma Davis', 
+            'James Wilson', 'Lisa Brown', 'David Miller', 'Anna Garcia',
+            'Chris Taylor', 'Maria Rodriguez', 'Tom Anderson', 'Kate Thompson'
+          ];
+          const displayName = member.user_id === user.id ? 
+            (user.email?.split('@')[0] || 'You') : 
+            names[index % names.length];
+          
           return {
             ...member,
             user_profiles: {
@@ -200,6 +342,18 @@ export default function LeagueDashboard() {
         });
         setMembers(membersWithProfiles);
 
+        // Set the first user as the picking user after members are loaded
+        if (membersWithProfiles.length > 0) {
+          setPickingUser(membersWithProfiles[0].user_id);
+          console.log('🎯 First user can pick:', membersWithProfiles[0].user_profiles?.display_name);
+          console.log('🎯 Setting picking user to:', membersWithProfiles[0].user_id);
+          console.log('🎯 Current user ID:', user?.id);
+          console.log('🎯 Is first user the current user?', membersWithProfiles[0].user_id === user?.id);
+        }
+
+        // Now fetch picks after members are loaded, but don't let it override picking user
+        fetchPicks();
+
       } catch (error) {
         console.error('Error fetching league data:', error);
         router.push('/dashboard');
@@ -211,7 +365,25 @@ export default function LeagueDashboard() {
     fetchLeagueData();
     fetchRedWingsGame();
     fetchLiveRoster();
+    // fetchPicks will be called after members are loaded in fetchLeagueData
   }, [user, leagueId, router]);
+
+  // Handle turn progression in demo mode
+  useEffect(() => {
+    if (picks.length > 0 && members.length > 0) {
+      const pickedUserIds = picks.map(pick => pick.user_id);
+      const nextUser = members.find(member => !pickedUserIds.includes(member.user_id));
+      setPickingUser(nextUser?.user_id || null);
+    }
+  }, [picks, members]);
+
+  // Ensure picking user is set when members are loaded
+  useEffect(() => {
+    if (members.length > 0 && !pickingUser) {
+      setPickingUser(members[0].user_id);
+      console.log('🎯 useEffect: Set picking user to first member:', members[0].user_profiles?.display_name);
+    }
+  }, [members, pickingUser]);
 
   const handleJoinLeague = async () => {
     if (!user || !leagueId) return;
@@ -328,18 +500,6 @@ export default function LeagueDashboard() {
                     <CardDescription className="text-lg">{league.description}</CardDescription>
                   )}
                 </div>
-                {/* League Pot Display - moved next to league name */}
-                <div className="bg-white border-2 border-green-500 rounded-lg px-4 py-2 text-green-600 shadow-sm">
-                  <div className="text-center">
-                    <div className="text-xs font-medium text-green-600 mb-1">LEAGUE POT</div>
-                    <div className="text-xl font-bold">
-                      ${league.pot_amount || 0}
-                    </div>
-                    <div className="text-xs text-green-500 mt-1">
-                      ${Math.round((league.pot_amount || 0) / Math.max(members.length, 1))} per member
-                    </div>
-                  </div>
-                </div>
               </div>
               <div className="text-right">
                 <div className="text-muted-foreground text-sm">Created</div>
@@ -389,7 +549,6 @@ export default function LeagueDashboard() {
                 </Badge>
               )}
             </div>
-            <CardTitle className="text-2xl font-bold text-red-400">🏒 Detroit Red Wings</CardTitle>
           </CardHeader>
           <CardContent>
             {redWingsGame && !redWingsGame.error ? (
@@ -426,103 +585,201 @@ export default function LeagueDashboard() {
           </CardContent>
         </Card>
 
-        {/* Members and Red Wings Roster Section */}
+        {/* Player Selection Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold">League Members & Red Wings Roster</CardTitle>
+            <CardTitle className="text-2xl font-bold">Player Selection</CardTitle>
+            <CardDescription>
+              {pickingUser === user?.id ? 
+                "🎯 It's YOUR turn! Click any player below to pick them for tonight's game." : 
+                pickingUser ? 
+                  `⏳ Waiting for ${members.find(m => m.user_id === pickingUser)?.user_profiles?.display_name || 'someone'} to pick their player...` :
+                  "✅ All players have been picked! Everyone has made their selection."
+              }
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* League Members Column */}
+              {/* League Members and Picks Column */}
               <div>
-                <h3 className="text-lg font-semibold mb-4 text-primary">League Members</h3>
+                <h3 className="text-xl font-semibold mb-6 text-primary">League Members & Picks</h3>
                 {members.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
                     No members yet. Be the first to join!
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {members.map((member) => (
-                      <Card key={member.id} className="bg-muted/50">
-                        <CardContent className="pt-3">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm">
-                              {member.user_profiles?.display_name?.charAt(0) || 
-                               member.user_profiles?.user_id?.charAt(0) || 
-                               '?'}
-                            </div>
-                            <div>
-                              <div className="font-medium text-sm">
-                                {member.user_profiles?.display_name || 'Anonymous User'}
+                  <div className="space-y-4">
+                    {members.map((member, index) => {
+                      const memberPick = picks.find(pick => pick.user_id === member.user_id);
+                      const isCurrentUser = member.user_id === user?.id;
+                      const isPicking = pickingUser === member.user_id;
+                      
+                      // Debug logging for first member
+                      if (index === 0) {
+                        console.log('🎯 First member debug:', {
+                          memberId: member.user_id,
+                          currentUser: user?.id,
+                          pickingUser,
+                          isCurrentUser,
+                          isPicking
+                        });
+                      }
+                      
+                      return (
+                        <Card 
+                          key={member.id} 
+                          className={`${
+                            isPicking ? 'border-2 border-blue-500 bg-blue-50' : 
+                            memberPick ? 'bg-green-50 border-green-200' : 
+                            'bg-muted/50'
+                          }`}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center space-x-3 flex-1">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm ${
+                                  isPicking ? 'bg-blue-500 text-white' :
+                                  memberPick ? 'bg-green-500 text-white' :
+                                  'bg-primary text-primary-foreground'
+                                }`}>
+                                  {member.user_profiles?.display_name?.charAt(0) || 
+                                   member.user_profiles?.user_id?.charAt(0) || 
+                                   '?'}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-base">
+                                    {member.user_profiles?.display_name || 'Anonymous User'}
+                                    {isCurrentUser && ' (You)'}
+                                  </div>
+                                  <div className="text-muted-foreground text-sm mt-1">
+                                    {memberPick ? 
+                                      `✅ Picked: ${memberPick.player_name} (#${memberPick.player_number})` :
+                                      isPicking ? '🎯 Click a player below to pick!' : '⏸️ Waiting for their turn'
+                                    }
+                                  </div>
+                                </div>
                               </div>
-                              <div className="text-muted-foreground text-xs">
-                                Joined {new Date(member.joined_at).toLocaleDateString()}
+                              <div className="flex flex-col items-end space-y-2 ml-3">
+                                {isPicking && (
+                                  <Badge variant="default" className="animate-pulse text-xs">
+                                    {isCurrentUser ? 'YOUR TURN' : 'PICKING NOW'}
+                                  </Badge>
+                                )}
+                                {memberPick && (
+                                  <Badge variant="outline" className="text-xs">
+                                    ✓ Picked
+                                  </Badge>
+                                )}
                               </div>
-                              {member.user_profiles?.favorite_team && (
-                                <Badge variant="outline" className="text-xs mt-1">
-                                  🏒 {member.user_profiles.favorite_team}
-                                </Badge>
-                              )}
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </div>
 
-              {/* Red Wings Roster Column */}
+              {/* Available Players Column */}
               <div>
-                <h3 className="text-lg font-semibold mb-4 text-red-600">
-                  Detroit Red Wings Roster
+                <h3 className="text-xl font-semibold mb-6 text-red-600">
+                  {pickingUser === user?.id ? '🎯 Click a Player to Pick Them!' : 'Available Players'}
                   {redWingsGame && redWingsGame.status === 'inprogress' && (
                     <Badge variant="destructive" className="ml-2 animate-pulse">
                       🔴 LIVE
                     </Badge>
                   )}
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {rosterLoading ? (
                     <div className="text-center text-muted-foreground py-8">
-                      Loading live roster...
+                      Loading players...
                     </div>
                   ) : liveRoster.length > 0 ? (
-                    liveRoster.map((player, index) => (
-                    <Card key={index} className="bg-red-50 border-red-200">
-                      <CardContent className="pt-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                              {player.number}
-                            </div>
-                            <div>
-                              <div className="font-medium text-sm text-red-800">
-                                {player.name}
+                    liveRoster.map((player, index) => {
+                      const isPicked = picks.some(pick => pick.player_name === player.name);
+                      // For testing: allow first user to always pick if they're the first member
+                      const isFirstUser = members.length > 0 && members[0].user_id === user?.id;
+                      const canPick = (pickingUser === user?.id || isFirstUser) && !isPicked;
+                      
+                      // Debug logging for first few players
+                      if (index < 3) {
+                        console.log('🎯 Player card debug:', {
+                          player: player.name,
+                          pickingUser,
+                          currentUser: user?.id,
+                          canPick,
+                          isPicked
+                        });
+                      }
+                      
+                      return (
+                        <Card 
+                          key={index} 
+                          className={`${
+                            isPicked ? 'bg-gray-100 border-gray-300 opacity-50 cursor-not-allowed' :
+                            canPick ? 'bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400 cursor-pointer shadow-md hover:shadow-lg transition-all duration-200' :
+                            'bg-red-50 border-red-200 cursor-not-allowed'
+                          }`}
+                          onClick={canPick ? () => {
+                            console.log('🎯 Player clicked:', player.name, 'canPick:', canPick);
+                            makePick(player);
+                          } : undefined}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3 flex-1">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                                  isPicked ? 'bg-gray-400 text-white' :
+                                  canPick ? 'bg-red-600 text-white ring-2 ring-red-300' :
+                                  'bg-red-600 text-white'
+                                }`}>
+                                  {player.number}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className={`font-medium text-base ${
+                                    isPicked ? 'text-gray-500' : 'text-red-800'
+                                  }`}>
+                                    {player.name}
+                                    {isPicked && ' (PICKED)'}
+                                  </div>
+                                  <div className={`text-sm mt-1 ${
+                                    isPicked ? 'text-gray-400' : 'text-red-600'
+                                  }`}>
+                                    #{player.number} • {player.position}
+                                  </div>
+                                  {canPick && (
+                                    <div className="text-xs text-red-600 font-semibold mt-1">
+                                      ← CLICK TO PICK!
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              <div className="text-red-600 text-xs">
-                                #{player.number} • {player.position}
+                              <div className="text-right ml-3">
+                                <div className={`text-xs font-medium mb-1 ${
+                                  isPicked ? 'text-gray-500' : 'text-red-700'
+                                }`}>
+                                  Game Stats
+                                </div>
+                                <div className={`text-sm font-semibold ${
+                                  isPicked ? 'text-gray-400' : 'text-red-600'
+                                }`}>
+                                  {player.points}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-xs font-medium text-red-700 mb-1">Game Stats</div>
-                            <div className="text-xs text-red-600 font-semibold">
-                              {player.points}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    ))
+                          </CardContent>
+                        </Card>
+                      );
+                    })
                   ) : (
                     <div className="text-center text-muted-foreground py-8">
-                      No roster data available
+                      No players available
                     </div>
                   )}
                 </div>
                 <div className="mt-4 text-xs text-muted-foreground text-center">
-                  🏒 Red Wings roster for game vs {redWingsGame?.opponent || 'Buffalo Sabres'}
+                  🏒 Red Wings players for game vs {redWingsGame?.opponent || 'Buffalo Sabres'}
                   {redWingsGame && redWingsGame.status === 'inprogress' && ' • LIVE'}
                 </div>
               </div>
