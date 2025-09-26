@@ -60,6 +60,8 @@ export default function LeagueDashboard() {
   const [isMember, setIsMember] = useState(false);
   const [redWingsGame, setRedWingsGame] = useState<RedWingsGame | null>(null);
   const [gameLoading, setGameLoading] = useState(true);
+  const [liveRoster, setLiveRoster] = useState<any[]>([]);
+  const [rosterLoading, setRosterLoading] = useState(true);
   const router = useRouter();
   const params = useParams();
   const leagueId = params.id as string;
@@ -106,6 +108,32 @@ export default function LeagueDashboard() {
     } finally {
       setGameLoading(false);
       console.log('🏁 Frontend: Finished fetching Red Wings game');
+    }
+  };
+
+  const fetchLiveRoster = async () => {
+    try {
+      console.log('🏒 Frontend: Starting to fetch live Red Wings roster...');
+      setRosterLoading(true);
+      
+      const response = await fetch('/api/red-wings-roster');
+      console.log('📡 Frontend: Roster API response status:', response.status, response.statusText);
+      
+      const data = await response.json();
+      console.log('📊 Frontend: Roster API response data:', JSON.stringify(data, null, 2));
+      
+      if (response.ok && data.success) {
+        console.log('✅ Frontend: Successfully received roster data');
+        setLiveRoster(data.roster || []);
+      } else {
+        console.error('❌ Frontend: Roster API returned error:', data.error);
+        setLiveRoster([]);
+      }
+    } catch (error) {
+      console.error('💥 Frontend: Error fetching live roster:', error);
+      setLiveRoster([]);
+    } finally {
+      setRosterLoading(false);
     }
   };
 
@@ -182,6 +210,7 @@ export default function LeagueDashboard() {
 
     fetchLeagueData();
     fetchRedWingsGame();
+    fetchLiveRoster();
   }, [user, leagueId, router]);
 
   const handleJoinLeague = async () => {
@@ -292,11 +321,25 @@ export default function LeagueDashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-4xl font-bold">{league.name}</CardTitle>
-                {league.description && (
-                  <CardDescription className="text-lg">{league.description}</CardDescription>
-                )}
+              <div className="flex items-center space-x-6">
+                <div>
+                  <CardTitle className="text-4xl font-bold">{league.name}</CardTitle>
+                  {league.description && (
+                    <CardDescription className="text-lg">{league.description}</CardDescription>
+                  )}
+                </div>
+                {/* League Pot Display - moved next to league name */}
+                <div className="bg-white border-2 border-green-500 rounded-lg px-4 py-2 text-green-600 shadow-sm">
+                  <div className="text-center">
+                    <div className="text-xs font-medium text-green-600 mb-1">LEAGUE POT</div>
+                    <div className="text-xl font-bold">
+                      ${league.pot_amount || 0}
+                    </div>
+                    <div className="text-xs text-green-500 mt-1">
+                      ${Math.round((league.pot_amount || 0) / Math.max(members.length, 1))} per member
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-muted-foreground text-sm">Created</div>
@@ -306,18 +349,7 @@ export default function LeagueDashboard() {
           </CardHeader>
           
           <CardContent>
-            {/* League Pot Display */}
-            <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-6 mb-6 text-white shadow-lg border border-red-500/20">
-              <div className="text-center">
-                <div className="text-sm font-medium text-red-100 mb-1">LEAGUE POT</div>
-                <div className="text-4xl font-bold">
-                  ${(league.pot_amount || 0).toLocaleString()}
-                </div>
-                <div className="text-red-200 text-sm mt-1">
-                  {members.length} member{members.length !== 1 ? 's' : ''} • ${Math.round((league.pot_amount || 0) / Math.max(members.length, 1))} per member
-                </div>
-              </div>
-            </div>
+
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -349,6 +381,14 @@ export default function LeagueDashboard() {
         {/* Red Wings Next Game */}
         <Card className="mb-8 border-red-500/20">
           <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-2xl font-bold text-red-600">🏒 Detroit Red Wings</CardTitle>
+              {redWingsGame && redWingsGame.status === 'inprogress' && (
+                <Badge variant="destructive" className="animate-pulse">
+                  🔴 LIVE
+                </Badge>
+              )}
+            </div>
             <CardTitle className="text-2xl font-bold text-red-400">🏒 Detroit Red Wings</CardTitle>
           </CardHeader>
           <CardContent>
@@ -386,46 +426,107 @@ export default function LeagueDashboard() {
           </CardContent>
         </Card>
 
-        {/* Members Section */}
+        {/* Members and Red Wings Roster Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold">League Members</CardTitle>
+            <CardTitle className="text-2xl font-bold">League Members & Red Wings Roster</CardTitle>
           </CardHeader>
           <CardContent>
-            {members.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                No members yet. Be the first to join!
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {members.map((member) => (
-                  <Card key={member.id} className="bg-muted/50">
-                    <CardContent className="pt-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold">
-                          {member.user_profiles?.display_name?.charAt(0) || 
-                           member.user_profiles?.user_id?.charAt(0) || 
-                           '?'}
-                        </div>
-                        <div>
-                          <div className="font-medium">
-                            {member.user_profiles?.display_name || 'Anonymous User'}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* League Members Column */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-primary">League Members</h3>
+                {members.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    No members yet. Be the first to join!
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {members.map((member) => (
+                      <Card key={member.id} className="bg-muted/50">
+                        <CardContent className="pt-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm">
+                              {member.user_profiles?.display_name?.charAt(0) || 
+                               member.user_profiles?.user_id?.charAt(0) || 
+                               '?'}
+                            </div>
+                            <div>
+                              <div className="font-medium text-sm">
+                                {member.user_profiles?.display_name || 'Anonymous User'}
+                              </div>
+                              <div className="text-muted-foreground text-xs">
+                                Joined {new Date(member.joined_at).toLocaleDateString()}
+                              </div>
+                              {member.user_profiles?.favorite_team && (
+                                <Badge variant="outline" className="text-xs mt-1">
+                                  🏒 {member.user_profiles.favorite_team}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-muted-foreground text-sm">
-                            Joined {new Date(member.joined_at).toLocaleDateString()}
-                          </div>
-                          {member.user_profiles?.favorite_team && (
-                            <Badge variant="outline" className="text-xs mt-1">
-                              🏒 {member.user_profiles.favorite_team}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Red Wings Roster Column */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-red-600">
+                  Detroit Red Wings Roster
+                  {redWingsGame && redWingsGame.status === 'inprogress' && (
+                    <Badge variant="destructive" className="ml-2 animate-pulse">
+                      🔴 LIVE
+                    </Badge>
+                  )}
+                </h3>
+                <div className="space-y-3">
+                  {rosterLoading ? (
+                    <div className="text-center text-muted-foreground py-8">
+                      Loading live roster...
+                    </div>
+                  ) : liveRoster.length > 0 ? (
+                    liveRoster.map((player, index) => (
+                    <Card key={index} className="bg-red-50 border-red-200">
+                      <CardContent className="pt-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                              {player.number}
+                            </div>
+                            <div>
+                              <div className="font-medium text-sm text-red-800">
+                                {player.name}
+                              </div>
+                              <div className="text-red-600 text-xs">
+                                #{player.number} • {player.position}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs font-medium text-red-700 mb-1">Game Stats</div>
+                            <div className="text-xs text-red-600 font-semibold">
+                              {player.points}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    ))
+                  ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                      No roster data available
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4 text-xs text-muted-foreground text-center">
+                  🏒 Red Wings roster for game vs {redWingsGame?.opponent || 'Buffalo Sabres'}
+                  {redWingsGame && redWingsGame.status === 'inprogress' && ' • LIVE'}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

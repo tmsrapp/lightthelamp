@@ -1,147 +1,150 @@
 import { NextResponse } from 'next/server';
 
-// NHL Stats API interfaces
-interface NHLGame {
-  gamePk: number;
-  gameDate: string;
-  status: {
-    abstractGameState: string;
-    detailedState: string;
+// Sportradar NHL API interfaces
+interface SportradarGame {
+  id: string;
+  scheduled: string;
+  status: string;
+  home: {
+    id: string;
+    name: string;
+    alias: string;
   };
-  teams: {
-    away: {
-      team: {
-        id: number;
-        name: string;
-        abbreviation: string;
-      };
-      score?: number;
-    };
-    home: {
-      team: {
-        id: number;
-        name: string;
-        abbreviation: string;
-      };
-      score?: number;
-    };
+  away: {
+    id: string;
+    name: string;
+    alias: string;
   };
   venue: {
+    id: string;
     name: string;
+    city: string;
+    state: string;
   };
 }
 
-interface NHLResponse {
-  dates: Array<{
-    date: string;
-    games: NHLGame[];
-  }>;
+interface SportradarResponse {
+  games: SportradarGame[];
 }
 
 export async function GET() {
   try {
-    // Get today's date and format it for the API
-    const today = new Date().toISOString().split('T')[0];
+    console.log('🔍 Fetching Red Wings schedule from Sportradar NHL API...');
     
-    // Get next 30 days of games (free API allows longer range)
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 30);
-    const endDateString = endDate.toISOString().split('T')[0];
+    // Get today's date and format it for Sportradar API (YYYY/MM/DD format)
+    const today = new Date();
     
-    console.log('🔍 Fetching Red Wings schedule from free NHL Stats API...');
-    console.log('📅 Date range:', { today, endDate: endDateString });
-    
-    // Use free NHL Stats API (no key required)
-    const apiUrl = `https://statsapi.web.nhl.com/api/v1/schedule?teamId=17&startDate=${today}&endDate=${endDateString}&expand=schedule.teams,schedule.linescore`;
-    
-    console.log('🌐 NHL Stats API URL:', apiUrl);
-    
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; NHL Fantasy App)',
-        'Accept': 'application/json',
-      },
-      signal: AbortSignal.timeout(15000)
-    });
-    
-    if (!response.ok) {
-      console.error('❌ NHL Stats API error:', response.status, response.statusText);
-      throw new Error(`NHL Stats API returned status: ${response.status}`);
+    // Try multiple dates to find upcoming games
+    const datesToTry = [];
+    for (let i = 0; i < 14; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      const dateStr = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
+      datesToTry.push(dateStr);
     }
     
-    const data = await response.json();
-    console.log('📊 NHL Stats API response received');
+    console.log('📅 Checking dates:', datesToTry);
     
-    // Find the next upcoming Red Wings game
-    let nextGame = null;
-    console.log('🎯 Looking for next Red Wings game...');
+    // Sportradar NHL API key from environment variables
+    const apiKey = process.env.SPORTRADAR_NHL_API_KEY;
     
-    for (const dateData of data.dates) {
-      for (const game of dateData.games) {
-        // Skip completed games
-        if (game.status.abstractGameState === 'Final' || 
-            game.status.abstractGameState === 'Live') {
-          continue;
+    if (!apiKey) {
+      console.error('❌ SPORTRADAR_NHL_API_KEY environment variable not found');
+      throw new Error('API key not configured');
+    }
+    
+    // Try each date until we find a Red Wings game
+    for (const dateStr of datesToTry) {
+      const apiUrl = `https://api.sportradar.com/nhl/trial/v7/en/games/${dateStr}/schedule.json?api_key=${apiKey}`;
+      console.log('🌐 Trying Sportradar URL for date:', dateStr);
+      
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'LightTheLamp/1.0'
+          },
+          signal: AbortSignal.timeout(10000)
+        });
+        
+        if (!response.ok) {
+          console.log(`❌ Sportradar API error for ${dateStr}:`, response.status, response.statusText);
+          const responseText = await response.text();
+          console.log('Response text:', responseText.substring(0, 200));
+          continue; // Try next date
         }
         
-        // Check if this is a Red Wings game (team ID 17)
-        const isRedWingsGame = game.teams.home.team.id === 17 || game.teams.away.team.id === 17;
+        const data: SportradarResponse = await response.json();
+        console.log('📊 Sportradar API response received for', dateStr);
         
-        if (isRedWingsGame && !nextGame) {
-          nextGame = game;
-          console.log('✅ Found next Red Wings game!', {
-            opponent: game.teams.home.team.id === 17 ? game.teams.away.team.name : game.teams.home.team.name,
-            isHome: game.teams.home.team.id === 17,
-            gameDate: game.gameDate,
-            venue: game.venue.name
-          });
-          break;
+        if (!data.games || data.games.length === 0) {
+          console.log('📅 No games found for', dateStr);
+          continue; // Try next date
         }
+        
+        // Find Red Wings game (Detroit Red Wings)
+        let redWingsGame = null;
+        for (const game of data.games) {
+          // Check if Detroit Red Wings is playing (home or away)
+          const isRedWingsGame = game.home.name.toLowerCase().includes('detroit') || 
+                                game.away.name.toLowerCase().includes('detroit');
+          
+          if (isRedWingsGame) {
+            redWingsGame = game;
+            console.log('✅ Found Red Wings game!', {
+              opponent: game.home.name.toLowerCase().includes('detroit') ? game.away.name : game.home.name,
+              isHome: game.home.name.toLowerCase().includes('detroit'),
+              scheduled: game.scheduled,
+              venue: game.venue.name
+            });
+            break;
+          }
+        }
+        
+        if (redWingsGame) {
+          // Format the response
+          const gameDate = new Date(redWingsGame.scheduled);
+          const opponent = redWingsGame.home.name.toLowerCase().includes('detroit') 
+            ? redWingsGame.away.name 
+            : redWingsGame.home.name;
+          
+          const isHomeGame = redWingsGame.home.name.toLowerCase().includes('detroit');
+          const venue = redWingsGame.venue.name;
+          
+          const formattedGame = {
+            gameId: redWingsGame.id,
+            date: gameDate.toLocaleDateString('en-US', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            }),
+            time: gameDate.toLocaleTimeString('en-US', { 
+              hour: 'numeric', 
+              minute: '2-digit',
+              timeZoneName: 'short'
+            }),
+            opponent,
+            isHomeGame,
+            venue,
+            status: redWingsGame.status,
+            gameDate: redWingsGame.scheduled,
+            source: 'Sportradar NHL API'
+          };
+          
+          console.log('🎉 Final formatted game data:', JSON.stringify(formattedGame, null, 2));
+          return NextResponse.json(formattedGame);
+        }
+        
+      } catch (fetchError) {
+        console.log(`💥 Fetch error for ${dateStr}:`, fetchError);
+        continue; // Try next date
       }
-      if (nextGame) break;
     }
     
-    if (!nextGame) {
-      console.log('❌ No upcoming Red Wings games found');
-      return NextResponse.json({ 
-        error: 'No upcoming Red Wings games found',
-        message: 'No games scheduled in the next 30 days'
-      }, { status: 404 });
-    }
-    
-    // Format the response
-    const gameDate = new Date(nextGame.gameDate);
-    const opponent = nextGame.teams.home.team.id === 17 
-      ? nextGame.teams.away.team.name 
-      : nextGame.teams.home.team.name;
-    
-    const isHomeGame = nextGame.teams.home.team.id === 17;
-    const venue = nextGame.venue.name;
-    
-    const formattedGame = {
-      gameId: nextGame.gamePk,
-      date: gameDate.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      }),
-      time: gameDate.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        timeZoneName: 'short'
-      }),
-      opponent,
-      isHomeGame,
-      venue,
-      status: nextGame.status.detailedState,
-      gameDate: nextGame.gameDate,
-      source: 'NHL Stats API (Free)'
-    };
-    
-    console.log('🎉 Final formatted game data:', JSON.stringify(formattedGame, null, 2));
-    return NextResponse.json(formattedGame);
+    console.log('❌ No upcoming Red Wings games found in next 14 days');
+    throw new Error('No upcoming Red Wings games found');
     
   } catch (error) {
     console.error('💥 Error fetching Red Wings schedule:', error);
