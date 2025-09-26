@@ -332,7 +332,7 @@ export default function Dashboard() {
                           {isCreator && <span className="text-primary">👑 You created this league</span>}
                         </div>
                         {isMember && (
-                          <div className="mt-2 text-sm text-green-600">
+                          <div className="mt-2 text-sm text-red-400">
                             ✓ You&apos;re a member - Click to view league
                           </div>
                         )}

@@ -349,6 +349,7 @@ export default function LeagueDashboard() {
           </CardHeader>
           
           <CardContent>
+
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -378,7 +379,7 @@ export default function LeagueDashboard() {
         </Card>
 
         {/* Red Wings Next Game */}
-        <Card className="mb-8 border-red-200">
+        <Card className="mb-8 border-red-500/20">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-2xl font-bold text-red-600">🏒 Detroit Red Wings</CardTitle>
@@ -388,12 +389,13 @@ export default function LeagueDashboard() {
                 </Badge>
               )}
             </div>
+            <CardTitle className="text-2xl font-bold text-red-400">🏒 Detroit Red Wings</CardTitle>
           </CardHeader>
           <CardContent>
             {redWingsGame && !redWingsGame.error ? (
               <div className="text-lg">
                 <div className="font-semibold text-foreground">Next Game</div>
-                <div className="text-red-600">
+                <div className="text-red-400">
                   {redWingsGame.isHomeGame ? 'vs.' : '@'} {redWingsGame.opponent} - {redWingsGame.date} at {redWingsGame.time}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
